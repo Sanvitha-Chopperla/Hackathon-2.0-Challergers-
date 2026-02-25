@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { issueCertificateOnChain } from '../services/blockchain';
+import { issueCertificateOnChain, getStudentHash, verifyCertificateByStudentId } from '../services/blockchain';
 import type { Certificate } from '../services/blockchain';
 import { GraduationCap, Upload, CheckCircle2, Copy } from 'lucide-react';
 import { authenticateUser, type User } from '../services/auth';
@@ -39,6 +39,13 @@ export default function UniversityPortal({ currentUser, setCurrentUser }: Univer
         } else {
             setLoginError(message);
         }
+    };
+
+    const handleIssue = (e: React.FormEvent) => {
+        e.preventDefault();
+        const result = issueCertificateOnChain(formData);
+        setIssuedHash(result.hash);
+        alert(result.message);
     };
 
     if (!currentUser) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { UserCircle, ShieldAlert, CheckCircle2, QrCode } from 'lucide-react';
-import { verifyCertificate } from '../services/blockchain';
+import { verifyCertificate, verifyCertificateByStudentId, getStudentHash } from '../services/blockchain';
 import { authenticateUser, type User } from '../services/auth';
 
 interface StudentPortalProps {
@@ -35,13 +35,20 @@ export default function StudentPortal({ currentUser, setCurrentUser }: StudentPo
 
     const handleVerify = (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real scenario, the student would just submit their credentials to format the QR code.
-        // For this prototype, we'll verify it's valid locally just to be sure.
-        const isValid = verifyCertificate(credentials.hash);
-        if (isValid) {
-            setIsVerified(true);
+        
+        // First check if the student ID exists and has a certificate
+        const existingHash = getStudentHash(credentials.studentId);
+        
+        if (existingHash) {
+            // Student already has a certificate, verify the hash matches
+            if (existingHash === credentials.hash) {
+                setIsVerified(true);
+            } else {
+                alert("Error: The hash you entered does not match the certificate on file for this student ID. Please contact your university.");
+            }
         } else {
-            alert("Invalid credentials. The hash could not be found on the ledger.");
+            // No certificate found for this student ID
+            alert("No certificate found for this student ID. Please contact your university to issue your certificate.");
         }
     };
 
@@ -130,6 +137,20 @@ export default function StudentPortal({ currentUser, setCurrentUser }: StudentPo
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
                             <input required type="text" value={credentials.studentId} onChange={e => setCredentials({ ...credentials, studentId: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="STU-987654" />
+                            {credentials.studentId && getStudentHash(credentials.studentId) && (
+                                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                                    <p className="text-blue-800 font-medium mb-1">✓ Certificate Found!</p>
+                                    <p className="text-blue-700 text-xs font-mono break-all">
+                                        {getStudentHash(credentials.studentId)}
+                                    </p>
+                                    <p className="text-blue-600 text-xs mt-1">Copy this hash to the field below to verify your credentials.</p>
+                                </div>
+                            )}
+                            {credentials.studentId && !getStudentHash(credentials.studentId) && (
+                                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                                    <p className="text-yellow-800">No certificate found for this student ID yet. Contact your university to issue your certificate.</p>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Cryptographic Hash (from University)</label>
